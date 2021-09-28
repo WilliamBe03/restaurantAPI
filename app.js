@@ -32,7 +32,11 @@ app.get("/companies/:id", async (req, res) => {
         (err, rows) => {
         if (err) {
             throw err;
-        };
+            };
+            if (rows.length === 0) {
+                res.sendStatus(404);
+                return;
+            }
         res.send(rows);
     });
 });
@@ -44,11 +48,20 @@ app.get("/companies/:id/menus", async (req, res) => {
             if (err) {
                 throw err;
             };
+            if (rows.length === 0) {
+                res.sendStatus(404);
+                return;
+            }
             res.send(rows);
         });
 });
 
 app.post("/companies", (req, res) => {
+    const { name, logo } = req.body
+    if (!name || !logo) {
+        res.sendStatus(400)
+        return
+    }
     Company.add(req.body.name, req.body.logo);
     res.send("Added!");
 });
@@ -79,11 +92,20 @@ app.get("/menus/:id", async (req, res) => {
             if (err) {
                 throw err;
             };
+            if (rows.length === 0) {
+                res.sendStatus(404);
+                return;
+            }
             res.send(rows)
         });
 });
 
 app.post("/menus", (req, res) => {
+    const { title, company } = req.body
+    if (!title || !company) {
+        res.sendStatus(400);
+        return
+    }
     Menu.add(req.body.title, req.body.company);
     res.send("Added!");
 });
@@ -110,11 +132,20 @@ app.get("/locations/:id", async (req, res) => {
             if (err) {
                 throw err;
             };
+            if (rows.length === 0) {
+                res.sendStatus(404);
+                return;
+            }
             res.send(rows);
         });
 });
 
 app.post("/locations", (req, res) => {
+    const { location, company, manager } = req.body
+    if (!location || !company || !manager) {
+        res.sendStatus(400);
+        return
+    }
     Location.add(req.body.location, req.body.company, req.body.manager);
     res.send("Added!");
 });
