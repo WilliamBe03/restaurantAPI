@@ -3,6 +3,13 @@ const express = require("express");
 const Companies = require("./tables/companies");
 const Locations = require("./tables/locations");
 const Menus = require("./tables/menus");
+const path = require("path");
+const Handlebars = require("handlebars");
+const expressHandlebars = require("express-handlebars");
+const {
+    allowInsecurePrototypeAccess,
+} = require("@handlebars/allow-prototype-access");
+
 
 const db = new sqlite3.Database("data.db");
 const app = express();
@@ -12,8 +19,52 @@ const Company = new Companies(db);
 const Location = new Locations(db);
 const Menu = new Menus(db);
 
+function dbAll(sql , p = []) {
+    return new Promise((resolve, reject) => {
+        db.all(sql, p, (err, rows) => {
+            if (err) {
+                reject(err);
+            }
+            resolve(rows);
+        });
+    });
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const handlebars = expressHandlebars({
+    handlebars: allowInsecurePrototypeAccess(Handlebars),
+});
+app.engine("handlebars", handlebars);
+app.set("view engine", "handlebars");
+app.set('views', path.join(__dirname, 'views'));
+
+app.get("/", async (req, res) => {
+    const companies = await dbAll("SELECT * FROM Companies");
+    res.render("home", { companies });
+});
+
+app.get("/company/:id", async (req, res) => {
+    const [company] = await dbAll("SELECT * FROM Companies WHERE id = (?)",
+        [req.params.id]);
+    res.render("company", { company });
+});
+
+app.get("/company/:id/menus", async (req, res) => {
+    const menus = await dbAll("SELECT * FROM Menus WHERE company = (?)",
+        [req.params.id]);
+    const [company] = await dbAll("SELECT * FROM Companies WHERE id = (?)",
+        [req.params.id]);
+    res.render("menus", {menus, company})
+})
+
+app.get("/company/:id/locations", async (req, res) => {
+    const locations = await dbAll("SELECT * FROM Locations WHERE company = (?)",
+        [req.params.id]);
+    const [company] = await dbAll("SELECT * FROM Companies WHERE id = (?)",
+        [req.params.id]);
+    res.render("locations", { locations, company });
+})
 
 app.get("/companies", async (req, res) => {
     await db.all("SELECT * FROM Companies",
@@ -36,12 +87,27 @@ app.get("/companies/:id", async (req, res) => {
                 res.sendStatus(404);
                 return;
             }
-        res.send(rows);
+            res.send(rows);
     });
 });
 
 app.get("/companies/:id/menus", async (req, res) => {
     await db.all("SELECT title FROM Menus WHERE company = (?)",
+        [req.params.id],
+        (err, rows) => {
+            if (err) {
+                throw err;
+            };
+            if (rows.length === 0) {
+                res.sendStatus(404);
+                return;
+            }
+            res.send(rows);
+        });
+});
+
+app.get("/companies/:id/locations", async (req, res) => {
+    await db.all("SELECT name, manager FROM Locations WHERE company = (?)",
         [req.params.id],
         (err, rows) => {
             if (err) {
