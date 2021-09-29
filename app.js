@@ -6,18 +6,17 @@ const Menus = require("./tables/menus");
 
 const db = new sqlite3.Database("data.db");
 const app = express();
-const port = 4000;
+const port = 4001;
 
 const Company = new Companies(db);
 const Location = new Locations(db);
 const Menu = new Menus(db);
 
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/companies", async (req, res) => {
-    var ret = await db.all("SELECT * FROM Companies",
+    await db.all("SELECT * FROM Companies",
         [], (err, rows) => {
             if (err) {
                 throw err;
@@ -27,7 +26,7 @@ app.get("/companies", async (req, res) => {
 });
 
 app.get("/companies/:id", async (req, res) => {
-    var ret = await db.all("SELECT name, logoURL FROM Companies WHERE id = (?)",
+    await db.all("SELECT name, logoURL FROM Companies WHERE id = (?)",
         [req.params.id],
         (err, rows) => {
         if (err) {
@@ -42,7 +41,7 @@ app.get("/companies/:id", async (req, res) => {
 });
 
 app.get("/companies/:id/menus", async (req, res) => {
-    var ret = await db.all("SELECT title FROM Menus WHERE company = (?)",
+    await db.all("SELECT title FROM Menus WHERE company = (?)",
         [req.params.id],
         (err, rows) => {
             if (err) {
@@ -66,18 +65,31 @@ app.post("/companies", (req, res) => {
     res.send("Added!");
 });
 
-app.delete("/companies/:id", (req, res) => {
-    Company.remove(req.params.id);
-    res.send("Removed!")
+app.delete("/companies/:id", async (req, res) => {
+    await db.all("SELECT * FROM Companies WHERE id = (?)",
+        [req.params.id], (err, rows) => {
+            if (err) { throw err }
+            if (rows.length === 0) {
+                res.sendStatus(400);
+                return
+            }
+            Company.remove(req.params.id);
+            res.send("Removed!")
+        });
 });
 
 app.put("companies/:id", (req, res) => {
+    const { name, logo } = req.body
+    if (!name || !logo) {
+        res.sendStatus(400)
+        return
+    }
     Company.update(req.params.id, req.body.name, req.body.logo)
     res.send("Updated!")
 });
 
 app.get("/menus", async (req, res) => {
-    var ret = await db.all("SELECT * FROM Menus",
+    await db.all("SELECT * FROM Menus",
         [], (err, rows) => {
             if (err) {
                 throw err;
@@ -87,7 +99,7 @@ app.get("/menus", async (req, res) => {
 });
 
 app.get("/menus/:id", async (req, res) => {
-    var ret = await db.all("SELECT * FROM Menus WHERE id = (?)",
+    await db.all("SELECT * FROM Menus WHERE id = (?)",
         [req.params.id], (err, rows) => {
             if (err) {
                 throw err;
@@ -110,13 +122,21 @@ app.post("/menus", (req, res) => {
     res.send("Added!");
 });
 
-app.delete("/menus/:id", (req, res) => {
-    Menu.remove(req.params.id);
-    res.send("Removed!")
+app.delete("/menus/:id", async (req, res) => {
+    await db.all("SELECT * FROM Menus WHERE id = (?)",
+        [req.params.id], (err, rows) => {
+            if (err) { throw err }
+            if (rows.length === 0) {
+                res.sendStatus(400);
+                return
+            }
+            Menu.remove(req.params.id);
+            res.send("Removed!")
+        });
 });
 
 app.get("/locations", async (req, res) => {
-    var ret = await db.all("SELECT * FROM Locations",
+    await db.all("SELECT * FROM Locations",
         [], (err, rows) => {
             if (err) {
                 throw err;
@@ -126,7 +146,7 @@ app.get("/locations", async (req, res) => {
 });
 
 app.get("/locations/:id", async (req, res) => {
-    var ret = await db.all("SELECT * FROM Locations WHERE id = (?)",
+    await db.all("SELECT * FROM Locations WHERE id = (?)",
         [req.params.id],
         (err, rows) => {
             if (err) {
@@ -150,11 +170,21 @@ app.post("/locations", (req, res) => {
     res.send("Added!");
 });
 
-app.delete("/locations/:id", (req, res) => {
-    Location.remove(req.params.id);
-    res.send("Removed!");
+app.delete("/locations/:id", async (req, res) => {
+    await db.all("SELECT * FROM Locations WHERE id = (?)",
+        [req.params.id], (err, rows) => {
+            if (err) { throw err }
+            if (rows.length === 0) {
+                res.sendStatus(400);
+                return
+            }
+            Location.remove(req.params.id);
+            res.send("Removed!")
+        });
 });
 
 app.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
 });
+
+module.exports = {app, db}
